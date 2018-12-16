@@ -1,15 +1,18 @@
 import csv
 import pickle
 
+import numpy as np
+
 import datatype
 
 def padding_feature(x, max_length):
-    assert x.shape[0] > max_length
+    assert x.shape[0] <= max_length
     if x.shape[0] == max_length:
         return x
     return np.concatenate([x, [0.] * (max_length - x.shape[0])], axis=0)
 
 def load_data(filename='data/diabetic_data.csv'):
+    print('begin load data from %s...' % (filename))
     used_datatypes = [datatype.features_for_medications()] # don't change(auto generated)
     all_datatypes = [] # don't change(auto generated)
     unused_datatypes = [] # the data not used(add name of un-used data)
@@ -19,12 +22,13 @@ def load_data(filename='data/diabetic_data.csv'):
         for i, row in enumerate(reader):
             if i == 0: # create feature collectors
                 all_datatypes = row
+                print('all feature types: %s' % (str(all_datatypes)))
                 for key in row:
-                    if key in datatypes[0].key_list() or key in exclude_datatypes:
+                    if key in used_datatypes[0].key_list or key in unused_datatypes:
                         continue
-                    datatypes.append(eval('datatype.%s' % (key))())
-                if 'features_for_medications' in exclude_datatypes:
-                    datatypes = datatypes[1:]
+                    used_datatypes.append(eval('datatype.%s' % (key))())
+                if 'features_for_medications' in unused_datatypes:
+                    used_datatypes = used_datatypes[1:]
             else: # load data
                 item = {key: value for (key, value) in zip(all_datatypes, row)}
                 data_features.append([collector(item) for collector in used_datatypes])
@@ -32,7 +36,7 @@ def load_data(filename='data/diabetic_data.csv'):
     feature_lengths = np.max(feature_lengths, axis=0)
     data_features = [[padding_feature(feature, length) for length, feature in zip(feature_lengths, item)] for item in data_features]
     data_features = np.stack([np.concatenate(item, axis=0) for item in data_features], axis=0) # data_num * feature_size
-    pickle.dump(data_features, open('%s.pkl' % filename))
+    pickle.dump(data_features, open('%s.pkl' % filename, 'wb'))
     print('features embedding created!')
     print('data num    : %d' % (data_features.shape[0]))
     print('feature size: %d' % (data_features.shape[1]))
@@ -40,3 +44,6 @@ def load_data(filename='data/diabetic_data.csv'):
     for collector, length in zip(used_datatypes, feature_lengths):
         print('\t%s feature size: \t%d' % (collector.name, length))
     print('feature saved to %s.pkl' % filename)
+
+if __name__ == '__main__':
+    load_data()

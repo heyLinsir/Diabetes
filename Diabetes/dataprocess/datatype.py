@@ -86,6 +86,11 @@ class weight(BasicData):
         '''
         if value == '?':
             return [1., 0.]
+        elif value[0] == '[':
+            begin, end = value.split('[')[1].split(')')[0].split('-')
+            return [0., 0.5 * (float(begin) + float(end))]
+        elif value[0] == '>':
+            return [0., float(value[1:])]
         else:
             return [0., float(value)]
 
@@ -129,17 +134,30 @@ class time_in_hospital(BasicData):
 class payer_code(BasicData):
     def __init__(self):
         super(payer_code, self).__init__('payer_code')
+
+        self.value_dict = {'?': 0, 'other': 0}
         
     def map(self, value):
-        '''
-        return [x, y]
-        x=1 for unknown payer_code, x=0 for known payer_code
-        y=0 for unknown payer_code
-        '''
-        if value == '?':
-            return [1., 0.]
-        else:
-            return [0., float(value)]
+        value = value.lower()
+        if value not in self.value_dict:
+            self.value_dict[value] = max(self.value_dict.values()) + 1
+        one_hot = [0.] * (max(self.value_dict.values()) + 1)
+        one_hot[self.value_dict[value]] = 1.
+        return one_hot
+
+class medical_specialty(BasicData):
+    def __init__(self):
+        super(medical_specialty, self).__init__('medical_specialty')
+
+        self.value_dict = {'?': 0, 'other': 0}
+        
+    def map(self, value):
+        value = value.lower()
+        if value not in self.value_dict:
+            self.value_dict[value] = max(self.value_dict.values()) + 1
+        one_hot = [0.] * (max(self.value_dict.values()) + 1)
+        one_hot[self.value_dict[value]] = 1.
+        return one_hot            
 
 class num_lab_procedures(BasicData):
     def __init__(self):
@@ -259,7 +277,7 @@ class features_for_medications(BasicData):
                         'glipizide', 'glyburide', 'tolbutamide', 'pioglitazone', 'rosiglitazone', 'acarbose', 
                         'miglitol', 'troglitazone', 'tolazamide', 'examide', 'citoglipton', 'insulin', 
                         'glyburide-metformin', 'glipizide-metformin', 'glimepiride-pioglitazone', 
-                        'metformin-rosiglitazone', 'metf+Y1:AU1ormin-pioglitazone']
+                        'metformin-rosiglitazone', 'metformin-pioglitazone']
         
     def map(self, value):
         value = value.lower()
@@ -277,7 +295,7 @@ class features_for_medications(BasicData):
         one_hot = []
         for key in self.key_list:
             one_hot.extend(self.map(data[key]))
-        return np.asarray(value, 'float32')        
+        return np.asarray(one_hot, 'float32')        
 
 class change(BasicData):
     def __init__(self):
