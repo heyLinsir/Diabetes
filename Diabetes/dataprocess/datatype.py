@@ -325,7 +325,7 @@ class diabetesMed(BasicData):
         one_hot[self.value_dict[value]] = 1.
         return one_hot   
 
-class readmitted(BasicData):
+class readmitted(BasicData): # used as label
     def __init__(self):
         super(readmitted, self).__init__('readmitted')
 
