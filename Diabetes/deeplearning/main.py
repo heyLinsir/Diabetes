@@ -19,7 +19,7 @@ def str2bool(v):
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--batch_size", help="batch size", type=int, default=64)
-parser.add_argument("--epoch", help="max training epoch num", type=int, default=50)
+parser.add_argument("--epoch", help="max training epoch num", type=int, default=100)
 parser.add_argument("--model", help="model name", type=str, default='mlp')
 parser.add_argument("--no_cuda", help="don't use GPU", action='store_true')
 parser.add_argument("--log_per_updates", help="log model loss per x updates (mini-batches)", type=int, default=500)
@@ -55,11 +55,19 @@ def calc_F1(pred, label):
         num_label[l] += 1.
         if p == l:
             num_right[p] += 1.
+    macro_precise = []
+    macro_recall = []
     for r, p, l in zip(num_right, num_pred, num_label):
         precise = r / p
         recall = r / l
+        macro_precise.append(precise)
+        macro_recall.append(recall)
         f1 = 2. * (precise * recall) / (precise + recall)
         print('precise: %f, recall: %f, f1: %f' % (precise, recall, f1))
+    macro_precise = np.mean(macro_precise)
+    macro_recall = np.mean(macro_recall)
+    macro_f1 = 2. * macro_precise * macro_recall / (macro_precise + macro_recall)
+    print('macro f1: %f' % (macro_f1))
 
 def main(pathname='data', use_resample=False):
     print('begin loading data...')
@@ -95,6 +103,8 @@ def main(pathname='data', use_resample=False):
         if use_resample:
             train_data = resample(origin_train_data)
         else:
+            if type(origin_train_data) == list:
+                origin_train_data = np.concatenate(origin_train_data, axis=0)
             train_data = shuffle(origin_train_data)
             
         train_batch_num = int(train_data.shape[0] / batch_size)

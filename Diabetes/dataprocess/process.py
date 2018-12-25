@@ -44,14 +44,58 @@ def split_set(data, path='data'):
     pickle.dump(dev_data, open('%s/dev.pkl' % (path), 'wb'))
     pickle.dump(test_data, open('%s/test.pkl' % (path), 'wb'))
 
+def split_set_by_id(data, path='data'):
+    '''
+    5% for dev set
+    5% for test set
+    90% for train set
+    '''
+    id_allocate = {'train': [], 'dev': [], 'test': []}
+    random.shuffle(data)
+    train_data = []
+    dev_data = []
+    test_data = []
+
+    for item in data:
+        pid = int(item[-1])
+        if pid in id_allocate['train']:
+            train_data.append(item[:-1])
+        elif pid in id_allocate['dev']:
+            dev_data.append(item[:-1])
+        elif pid in id_allocate['test']:
+            test_data.append(item[:-1])
+        else:
+            choice = random.random()
+            if choice < 0.9:
+                train_data.append(item[:-1])
+                id_allocate['train'].append(pid)
+            elif choice < 0.95:
+                dev_data.append(item[:-1])
+                id_allocate['dev'].append(pid)
+            else:
+                test_data.append(item[:-1])
+                id_allocate['test'].append(pid)
+
+    train_data = np.stack(train_data, axis=0)
+    dev_data = np.stack(dev_data, axis=0)
+    test_data = np.stack(test_data, axis=0)
+
+    print('train num: %d' % (train_data.shape[0]))
+    print('dev   num: %d' % (dev_data.shape[0]))
+    print('test  num: %d' % (test_data.shape[0]))
+    pickle.dump(train_data, open('%s/train.pkl' % (path), 'wb'))
+    pickle.dump(dev_data, open('%s/dev.pkl' % (path), 'wb'))
+    pickle.dump(test_data, open('%s/test.pkl' % (path), 'wb'))
+
 def normalize(data):
     max_value = data.max(axis=0) + 1e-12
-    max_value[-1] = 1
+    max_value[-2:] = 1
     return data / max_value
 
 def load_data(filename='data/diabetic_data.csv', use_resample=False):
     print('begin load data from %s...' % (filename))
     used_datatypes = [datatype.features_for_medications()] # don't change(auto generated)
+    id_collector = datatype.patient_nbr()
     all_datatypes = ['encounter_id', 'patient_nbr', 'weight', 'payer_code', 'medical_specialty', 'features_for_medications'] # don't change(auto generated)
     unused_datatypes = [] # the data not used(add name of un-used data)
     data_features = [] # don't change(auto generated)
@@ -69,7 +113,7 @@ def load_data(filename='data/diabetic_data.csv', use_resample=False):
                     used_datatypes = used_datatypes[1:]
             else: # load data
                 item = {key: value for (key, value) in zip(all_datatypes, row)}
-                data_features.append([collector(item) for collector in used_datatypes])
+                data_features.append([collector(item) for collector in used_datatypes] + [id_collector(item)])
     feature_lengths = [[len(feature) for feature in item] for item in data_features]
     feature_lengths = np.max(feature_lengths, axis=0)
     data_features = [[padding_feature(feature, length) for length, feature in zip(feature_lengths, item)] for item in data_features]
@@ -83,10 +127,11 @@ def load_data(filename='data/diabetic_data.csv', use_resample=False):
     for collector, length in zip(used_datatypes, feature_lengths):
         print('\t%s feature size: \t%d' % (collector.name, length))
     print('feature saved to %s.pkl' % filename)
-    if use_resample:
-        resample_split_set(data_features)
-    else:
-        split_set(data_features)
+    split_set_by_id(data_features)
+   # if use_resample:
+   #     resample_split_set(data_features)
+   # else:
+   #     split_set(data_features)
 
 if __name__ == '__main__':
     load_data(use_resample=False)
