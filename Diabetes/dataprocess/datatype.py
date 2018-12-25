@@ -325,7 +325,7 @@ class diabetesMed(BasicData):
         one_hot[self.value_dict[value]] = 1.
         return one_hot   
 
-class readmitted(BasicData): # used as label
+class readmitted(BasicData):
     def __init__(self):
         super(readmitted, self).__init__('readmitted')
 
@@ -335,6 +335,4 @@ class readmitted(BasicData): # used as label
         value = value.lower()
         if value not in self.value_dict:
             value = 'no'
-        one_hot = [0.] * len(self.value_dict)
-        one_hot[self.value_dict[value]] = 1.
-        return one_hot                                                     
+        return float(self.value_dict[value])                                                     
